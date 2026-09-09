@@ -1,0 +1,33 @@
+# ESP-IDF build outputs and old configuration snapshots
+build/
+sdkconfig.old
+
+# Python and local test tool caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+/tests/.tools/
+
+# Machine-specific editor configuration
+.vscode/
+
+# Local Wi-Fi credentials
+wifi_config.local.h
+.env
+.env.*
+!.env.example
+
+# Generated reports and sessions; retain diagnostic source scripts
+/reports/*
+!/reports/manual_diagnostics/
+/reports/manual_diagnostics/*
+!/reports/manual_diagnostics/*.py
+
+# Device flash dumps; accompanying maintenance notes remain tracked
+/master[12]_*.bin
+
+# Operating system metadata
+.DS_Store
+Thumbs.db

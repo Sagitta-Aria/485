@@ -1,0 +1,20 @@
+{
+  "folders": [
+    {
+      "name": "master",
+      "path": "master"
+    },
+    {
+      "name": "slave",
+      "path": "slave"
+    }
+  ],
+  "settings": {
+    "idf.extensionActivationMode": "always",
+    "idf.currentSetup": "D:\\esp32\\esp32-idf\\.espressif\\v5.5.4\\esp-idf",
+    "idf.port": "COM16",
+    "idf.portWin": "COM16",
+    "idf.monitorPort": "COM16",
+    "idf.flashType": "UART"
+  }
+}
