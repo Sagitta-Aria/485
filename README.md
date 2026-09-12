@@ -1,13 +1,31 @@
 # ESP32-S3 线缆矩阵 WiFi/RS485 工程
 
-本目录是基于 `D:\esp32\cable_tester` 的独立版本，源工程保持不变。
+本目录是 `D:\esp32\cable_tester_rs485` 的独立演进版本，原工程保持不变。
 
 ## 目录
 
 - `master/`：主机固件。WiFi 接收上位机命令，通过 UART1（GPIO17/18）驱动本机独立的 RS485 总线；UART2 使用 GPIO40(TX)/GPIO39(RX) 连接 XD31H，9600 8N1。
 - `slave/`：从机固件。正常仅监听 UART1 RS485，每台两片 CH446X 合计提供 24 组双触点，不包含低阻测量模块；保留可单独启用的 WiFi 调试代码。
-- `cable_tester_gui.py`：主从模式上位机。主机模式可同时接收 `master1`、`master2`，并把矩阵命令发给当前所选主机，由该主机访问自己 RS485 总线上的 slave；从机模式通过 `m1-s1`、`m2-s1` 等 WiFi 名称直连调试，支持双节点闭合，但不支持电阻测量。
-- `topology_scan.py`、`topology_binary.py`、`topology_panel.py`、`topology_transfer.py`：双端扫描、二分搜索、独立窗口和已确认数据存储。支持“拓扑编码”“二分扫描”两种方法；每侧可选 1～10 台从机，默认值为 7。使用说明见 [拓扑扫描](docs/topology_scan.md)。
+- `shared/`：主从固件共用的 RS485 拓扑协议头文件。
+- `host/`：全部上位机 Python 代码、测试和现场脚本。启动命令仍是根目录的 `cable_tester_gui.py`。
+- `reports/`、`calibration_profiles/`：上位机产生并需要人工查看或删除的数据，**保留在工程根目录**，不随代码移动。
+
+### 上位机分层（`host/cable_tester/`）
+
+代码按依赖方向分层，底层不反向依赖上层：
+
+| 层 | 内容 |
+|---|---|
+| `paths.py` | 工程根目录定位，集中定义 `reports/`、`calibration_profiles/`、`report_tools/`、`requirements.txt` |
+| `protocol/` | RS485 文本传输与确认存储（`topology_transfer.py`） |
+| `devices/` | 设备侧数据模型：校准配置存储、XD31H 十六进制转换 |
+| `analysis/` | 测量与判定：拓扑扫描、二分搜索、批量校准、四线回路、全引脚阻值 |
+| `worker/` | 独立调试任务控制器：单点、双节点、顺序回路、辅助回路、全矩阵复位 |
+| `ui/` | Tk 界面与内嵌 TCP 路由服务器（`gui.py`、`topology_panel.py`） |
+
+- `host/tests/`：22 个 unittest 模块 + `firmware/` 下的真实固件 C 测试。其中 5 个模块会编译固件源码，需要本机 C 编译器；缺少时**报错而不是跳过**，见 [测试与 C 编译工具链](docs/tests.md)。
+- `host/scripts/`：现场诊断工具（`manual_probe.py`、`recover_topology_cache.py`）。
+- 拓扑扫描支持“拓扑编码”“二分扫描”两种方法；每侧可选 1～10 台从机，默认值为 7。使用说明见 [拓扑扫描](docs/topology_scan.md)。
 
 ## ID
 
@@ -80,7 +98,7 @@ python -m pip install -r requirements.txt
 python cable_tester_gui.py
 ```
 
-上位机测试在工程根目录执行 `python -m unittest discover -s tests`。其中 4 个模块会真正编译固件 C 源码，需要本机 C 编译器；找不到时**报错而不是跳过**，指定方式、探测顺序和失败含义见 [测试与 C 编译工具链](docs/tests.md)。
+上位机测试在 `host/` 目录执行 `python -m unittest discover -s tests`。其中 5 个模块会真正编译固件 C 源码，需要本机 C 编译器；找不到时**报错而不是跳过**，指定方式、探测顺序和失败含义见 [测试与 C 编译工具链](docs/tests.md)。
 
 笔记本开启热点，监听 `0.0.0.0:3333`。上位机默认隐藏重复的 TCP 路由回执，只保留目标、命令和结果；需要排查链路时可关闭“过滤正常收发”。
 

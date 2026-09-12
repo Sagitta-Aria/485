@@ -8,7 +8,7 @@ __pycache__/
 .pytest_cache/
 .venv/
 venv/
-/tests/.tools/
+/host/tests/.tools/
 
 # Machine-specific editor configuration
 .vscode/
