@@ -5,10 +5,11 @@ from __future__ import annotations
 import ctypes
 import os
 from pathlib import Path
-import shutil
 import subprocess
 import tempfile
 import unittest
+
+from c_toolchain import build_environment, resolve_c_compiler
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -17,28 +18,22 @@ ROOT = Path(__file__).resolve().parents[1]
 class MasterTopologyFirmwareTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        zig = ROOT / "tests/.tools/ziglang/ziglang/zig.exe"
-        compiler = os.environ.get("CABLE_HOST_CC") or shutil.which("cc") or shutil.which("gcc") or shutil.which("clang")
-        if zig.is_file():
-            command = [str(zig), "cc"]
-        elif compiler:
-            if os.name == "nt" and "clang" in Path(compiler).name.lower():
-                targets = subprocess.run([compiler, "--print-targets"], capture_output=True, text=True, timeout=15)
-                if "x86" not in targets.stdout:
-                    raise unittest.SkipTest("Configured Clang has no native Windows x86 backend")
-            command = [compiler]
-        else:
-            raise unittest.SkipTest("A native C compiler or project-local Zig is required")
+        compiler = resolve_c_compiler(ROOT)
+        if os.name == "nt" and "clang" in Path(compiler.executable).name.lower():
+            targets = subprocess.run([*compiler.command, "--print-targets"],
+                                     capture_output=True, text=True, timeout=15).stdout
+            if "x86" not in targets:
+                raise RuntimeError(
+                    f"{compiler.executable} has no native Windows x86 backend, so it cannot "
+                    "build the firmware C harnesses. Set CABLE_HOST_CC to a working compiler."
+                )
         cls._temporary = tempfile.TemporaryDirectory(prefix="topology_c_", dir=ROOT / "tests")
-        command += ["-std=c11", "-D_POSIX_C_SOURCE=200809L", "-Wall", "-Wextra", "-Werror", "-O1", "-shared"]
+        command = [*compiler.command, "-std=c11", "-D_POSIX_C_SOURCE=200809L",
+                   "-Wall", "-Wextra", "-Werror", "-O1", "-shared"]
         if os.name != "nt":
             command += ["-fPIC"]
         command += ["-I", str(ROOT / "tests/firmware/topology_stubs")]
-        environment = dict(os.environ)
-        if compiler:
-            environment["PATH"] = str(Path(compiler).parent) + os.pathsep + environment.get("PATH", "")
-        environment["ZIG_LOCAL_CACHE_DIR"] = str(ROOT / "tests/.tools/zig-cache")
-        environment["ZIG_GLOBAL_CACHE_DIR"] = str(ROOT / "tests/.tools/zig-global-cache")
+        environment = build_environment(compiler, ROOT)
         cls._libraries = []
         try:
             for source in ("topology_scan_test", "topology_fixed_route_test"):

@@ -42,7 +42,7 @@
 
 验证结果：
 
-- `python -m unittest discover -s tests`：`Ran 171 tests`、`OK (skipped=2)`；两项固件 C 测试因缺少本机 C 编译器跳过，本次未重新构建固件。
+- `python -m unittest discover -s tests`：`Ran 171 tests`、`OK (skipped=2)`；两项固件 C 测试因缺少本机 C 编译器跳过，本次未重新构建固件。（注：这是当时的记录。现在缺少 C 编译器会**报错而不是跳过**，见 [测试与 C 编译工具链](tests.md)。）
 - 真实回环 TCP 完成 168 次编码读数和一次 25.380 ohm 单点读数，全程不消费界面事件队列。
 - 第 23 次读数后关闭并重新注册源 Master，扫描及时以 `CONNECTION_LOST` 结束，保留 23 次读数，两端复位确认，报告记录断线和重连。
 - 复位发送失败、发送后立刻重连、固件复位忙、停止过程中源 Master 掉线等边界均有回归覆盖。

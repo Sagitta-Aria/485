@@ -5,10 +5,11 @@ from __future__ import annotations
 import ctypes
 import os
 from pathlib import Path
-import shutil
 import subprocess
 import tempfile
 import unittest
+
+from c_toolchain import build_environment, resolve_c_compiler
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -17,25 +18,22 @@ ROOT = Path(__file__).resolve().parents[1]
 class RS485TopologyProtocolTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        compiler = (os.environ.get("CABLE_HOST_CC") or os.environ.get("CABLE_HOST_CLANG")
-                    or shutil.which("cc") or shutil.which("gcc") or shutil.which("clang"))
-        zig = ROOT / "tests/.tools/ziglang/ziglang/zig.exe"
-        native_clang = compiler and "clang" in Path(compiler).name.lower()
+        compiler = resolve_c_compiler(ROOT)
+        native_clang = "clang" in Path(compiler.executable).name.lower()
         if native_clang and os.name == "nt":
             targets = subprocess.run(
-                [compiler, "--print-targets"], check=True, capture_output=True,
+                [*compiler.command, "--print-targets"], check=True, capture_output=True,
                 text=True, timeout=10,
             ).stdout
             if "x86-64" not in targets:
-                compiler = None
-        use_zig = not compiler and os.name == "nt" and zig.is_file()
-        if not compiler and not use_zig:
-            raise unittest.SkipTest("A native C compiler or project-local Zig is required for firmware C tests")
+                raise RuntimeError(
+                    f"{compiler.executable} has no native Windows x86-64 backend, so it cannot "
+                    "build the portable C test. Set CABLE_HOST_CC to a working compiler."
+                )
         cls._temp = tempfile.TemporaryDirectory(prefix="rs485_protocol_", dir=ROOT / "tests")
         output = Path(cls._temp.name) / ("protocol.dll" if os.name == "nt" else "protocol.so")
-        command = [str(zig), "cc"] if use_zig else [compiler]
-        command += ["-std=c11", "-Wall", "-Wextra", "-Werror", "-O1", "-ffreestanding"]
-        if use_zig:
+        command = [*compiler.command, "-std=c11", "-Wall", "-Wextra", "-Werror", "-O1", "-ffreestanding"]
+        if compiler.is_zig:
             command += ["-target", "x86_64-windows-gnu", "-shared"]
         elif os.name == "nt" and native_clang:
             command += ["--target=x86_64-pc-windows-msvc", "-fuse-ld=lld", "-nostdlib", "-shared", "-Wl,/noentry"]
@@ -44,14 +42,9 @@ class RS485TopologyProtocolTests(unittest.TestCase):
         else:
             command += ["-shared", "-fPIC"]
         command += [str(ROOT / "tests/firmware/rs485_topology_protocol_test.c"), "-o", str(output)]
-        build_env = dict(os.environ)
-        if compiler:
-            build_env["PATH"] = str(Path(compiler).parent) + os.pathsep + build_env.get("PATH", "")
-        if use_zig:
-            build_env["ZIG_GLOBAL_CACHE_DIR"] = str(ROOT / "tests/.tools/zig-cache")
-            build_env["ZIG_LOCAL_CACHE_DIR"] = str(ROOT / "tests/.tools/zig-local-cache")
         try:
-            subprocess.run(command, check=True, capture_output=True, text=True, timeout=180, env=build_env)
+            subprocess.run(command, check=True, capture_output=True, text=True, timeout=180,
+                           env=build_environment(compiler, ROOT))
             cls._library = ctypes.CDLL(str(output))
         except subprocess.CalledProcessError as error:
             cls._temp.cleanup()

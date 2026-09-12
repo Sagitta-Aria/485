@@ -3,15 +3,12 @@
 from __future__ import annotations
 
 import ast
-import json
-import os
 from pathlib import Path
 import re
-import shlex
-import shutil
 import subprocess
 import unittest
 
+from c_toolchain import resolve_c_compiler
 import cable_tester_gui as gui
 
 
@@ -21,18 +18,7 @@ ROOT = Path(__file__).resolve().parents[1]
 class SlaveIdentityTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        compiler = os.environ.get("CABLE_HOST_CC") or shutil.which("gcc") or shutil.which("clang")
-        database = ROOT / "slave/build/compile_commands.json"
-        if not compiler and database.is_file():
-            entries = json.loads(database.read_text(encoding="utf-8"))
-            entry = next(item for item in entries if Path(item["file"]).name == "app_main.c")
-            arguments = entry.get("arguments") or shlex.split(entry["command"], posix=os.name != "nt")
-            candidate = arguments[0].strip('"')
-            if Path(candidate).is_file():
-                compiler = candidate
-        if not compiler:
-            raise unittest.SkipTest("A C compiler or configured slave ESP-IDF build is required")
-        cls.compiler = compiler
+        cls.compiler = resolve_c_compiler(ROOT).executable
 
     def _compile(self, source: str, side: int, index: int, *, preprocess: bool = False) -> subprocess.CompletedProcess[str]:
         return subprocess.run(

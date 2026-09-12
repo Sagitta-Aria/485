@@ -80,6 +80,8 @@ python -m pip install -r requirements.txt
 python cable_tester_gui.py
 ```
 
+上位机测试在工程根目录执行 `python -m unittest discover -s tests`。其中 4 个模块会真正编译固件 C 源码，需要本机 C 编译器；找不到时**报错而不是跳过**，指定方式、探测顺序和失败含义见 [测试与 C 编译工具链](docs/tests.md)。
+
 笔记本开启热点，监听 `0.0.0.0:3333`。上位机默认隐藏重复的 TCP 路由回执，只保留目标、命令和结果；需要排查链路时可关闭“过滤正常收发”。
 
 主机模式下先在“主机ID”选择 `master1` 或 `master2`，再在“矩阵目标”选择该主机本地矩阵或旧制从机 ID。同一时间只运行一个自动测量任务，但两台主机的 TCP 连接会同时保持在线。

@@ -118,6 +118,8 @@ $env:PATH = 'D:\python28\music\Dev-Cpp\MinGW64\bin;' + $env:PATH
 python -m unittest discover -s tests
 ```
 
+C 编译器探测顺序和“缺少编译器即报错”的行为见 [测试与 C 编译工具链](tests.md)。
+
 最终源码使用现有 ESP-IDF v5.5.4，在 `master/` 执行 `./idf.ps1 build` 已通过。输出 `master/build/esp32s3_cable_tester_master.bin` 大小 `0xc8ed0`，1 MiB 应用分区剩余 `0x37130`（22%）。构建同时生成包含 960 KiB 拓扑缓存的分区表。编译成功不代表已经在两块实物上运行。
 
 ## 升级与实机验收

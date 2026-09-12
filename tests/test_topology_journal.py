@@ -5,11 +5,12 @@ from __future__ import annotations
 import ctypes
 import os
 from pathlib import Path
-import shutil
 import subprocess
 import tempfile
 import unittest
 import zlib
+
+from c_toolchain import build_environment, resolve_c_compiler
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -17,24 +18,18 @@ ROOT = Path(__file__).resolve().parents[1]
 class TopologyJournalTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        zig = ROOT / "tests/.tools/ziglang/ziglang/zig.exe"
-        compiler = os.environ.get("CABLE_HOST_CC") or shutil.which("cc") or shutil.which("clang")
-        if zig.is_file():
-            command = [str(zig), "cc"]
-        elif compiler:
-            command = [compiler]
-        else:
-            raise unittest.SkipTest("A native C compiler or project-local Zig is required")
+        compiler = resolve_c_compiler(ROOT)
         cls._temporary = tempfile.TemporaryDirectory(prefix="journal_c_", dir=ROOT / "tests")
         cls._library = None
         output = Path(cls._temporary.name) / ("journal.dll" if os.name == "nt" else "journal.so")
-        command += ["-std=c11", "-Wall", "-Wextra", "-Werror", "-O1", "-shared"]
+        command = [*compiler.command, "-std=c11", "-Wall", "-Wextra", "-Werror", "-O1", "-shared"]
         if os.name != "nt":
             command += ["-fPIC"]
         command += ["-I", str(ROOT / "tests/firmware/journal_stubs"), "-I", str(ROOT / "tests/firmware/topology_stubs")]
         command += [str(ROOT / "tests/firmware/topology_journal_test.c"), "-o", str(output)]
         try:
-            subprocess.run(command, check=True, capture_output=True, text=True, timeout=120)
+            subprocess.run(command, check=True, capture_output=True, text=True, timeout=120,
+                           env=build_environment(compiler, ROOT))
             cls._library = ctypes.CDLL(str(output))
         except subprocess.CalledProcessError as error:
             cls._temporary.cleanup()

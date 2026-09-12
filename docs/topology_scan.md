@@ -168,4 +168,4 @@ cd D:\esp32\cable_tester_rs485\slave
 ./idf.ps1 build
 ```
 
-在工程根目录可执行 `python -m unittest discover -s tests -v` 检查算法、模拟传输和 GUI 路由。构建及软件测试不等于实机验证；本次实现未执行烧录或实物线缆扫描。
+在工程根目录可执行 `python -m unittest discover -s tests -v` 检查算法、模拟传输和 GUI 路由。其中 4 个模块会编译固件 C 源码，需要本机 C 编译器；缺少编译器时这 4 个模块报错而不跳过，编译器探测顺序和指定方法见 [测试与 C 编译工具链](tests.md)。构建及软件测试不等于实机验证；本次实现未执行烧录或实物线缆扫描。

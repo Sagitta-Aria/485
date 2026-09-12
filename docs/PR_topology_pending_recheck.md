@@ -54,4 +54,6 @@ $env:PATH = 'D:\python28\music\Dev-Cpp\MinGW64\bin;' + $env:PATH
 python -m unittest discover -s tests
 ```
 
+C 编译器探测顺序和“缺少编译器即报错”的行为见 [测试与 C 编译工具链](tests.md)。
+
 本次只改上位机，不修改或烧录固件，不访问串口或实物测量，不重启正在运行的上位机。重启更新后的上位机并进行新的编码扫描后即可使用；历史报告保持原样。
